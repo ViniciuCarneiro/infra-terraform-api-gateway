@@ -1,0 +1,6 @@
+aws_region     = "us-east-1"
+name           = "api-notifications"
+description    = "API criada para envio de notificações"
+stage_name     = "prod"
+queue_name     = "queue-notifications-email-prod"
+role_name      = "api-notifications_role"
