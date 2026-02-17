@@ -10,5 +10,4 @@ module "api_gateway" {
   description    = var.description
   stage_name     = var.stage_name
   queue_name  = var.queue_name
-  role_name      = var.role_name
 }

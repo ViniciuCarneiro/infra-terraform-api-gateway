@@ -1,15 +1,33 @@
 data "aws_caller_identity" "current" {}
 
+resource "aws_iam_role" "gateway_role" {
+  name               = "gateway_${var.name}_role"
+  assume_role_policy = file("${path.module}/../../iam_policies/api-gateway_assume_role_policy.json")
+}
 
-# Cria o API Gateway a partir do arquivo OpenAPI (YAML)
+resource "aws_iam_policy" "api_gateway_sqs_policy" {
+  name        = "gateway_${var.name}_sqs_policy"
+  description = "Política de acesso ao SQS para o API Gateway"
+  policy      = templatefile("${path.module}/../../iam_policies/sqs_policy.json.tpl", {
+    aws_region     = var.aws_region
+    aws_account_id = data.aws_caller_identity.current.account_id
+    sqs_queue_name = var.queue_name
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "gateway_role_sqs" {
+  role       = aws_iam_role.gateway_role.name
+  policy_arn = aws_iam_policy.api_gateway_sqs_policy.arn
+}
+
 resource "aws_api_gateway_rest_api" "rest_api" {
   name        = var.name
   description = var.description
   body        = templatefile("${path.module}/../../api-notifications-oas30-apigateway.yaml.tpl", {
-    role_name         = var.role_name
-    queue_name        = var.queue_name
-    AWS_ACCOUNT_ID    = data.aws_caller_identity.current.account_id
-    AWS_REGION        = var.aws_region
+    role_name      = aws_iam_role.gateway_role.name,
+    queue_name     = var.queue_name,
+    AWS_ACCOUNT_ID = data.aws_caller_identity.current.account_id,
+    AWS_REGION     = var.aws_region
   })
 
   endpoint_configuration {
@@ -17,7 +35,6 @@ resource "aws_api_gateway_rest_api" "rest_api" {
   }
 }
 
-# Realiza a implantação (deployment) da API
 resource "aws_api_gateway_deployment" "rest_api_deployment" {
   rest_api_id = aws_api_gateway_rest_api.rest_api.id
 
@@ -27,7 +44,6 @@ resource "aws_api_gateway_deployment" "rest_api_deployment" {
   }
 }
 
-# Cria o estágio da API
 resource "aws_api_gateway_stage" "api_stage" {
   deployment_id = aws_api_gateway_deployment.rest_api_deployment.id
   rest_api_id   = aws_api_gateway_rest_api.rest_api.id

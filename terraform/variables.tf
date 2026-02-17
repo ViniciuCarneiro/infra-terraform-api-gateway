@@ -19,11 +19,6 @@ variable "stage_name" {
   type        = string
 }
 
-variable "role_name" {
-  description = "Nome da função IAM associada"
-  type        = string
-}
-
 variable "queue_name" {
   description = "Nome da fila SQS"
   type        = string
